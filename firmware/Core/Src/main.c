@@ -45,7 +45,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define STR_BUFFER_SIZE 10
-#define BUFFER_SIZE	10
+#define BUFFER_SIZE	15
 
 #define EEPROM_P1_VALUE_ADDR 	0
 #define EEPROM_P1_ENG_ADDR		8
