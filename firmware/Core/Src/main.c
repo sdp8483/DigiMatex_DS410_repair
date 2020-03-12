@@ -184,7 +184,7 @@ int main(void) {
 
 		uint32_t avg = sum / BUFFER_SIZE;
 
-		int32_t grams = HX711_Calculate(&transferFn, avg);
+		int32_t grams = HX711_Calculate(&transferFn, avg) - HX711_Calculate(&transferFn, scale.offset);
 
 		LED_OFF;
 
