@@ -44,6 +44,18 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define STR_BUFFER_SIZE 10
+#define BUFFER_SIZE	10
+
+#define EEPROM_P1_ADDR 0
+#define EEPROM_P2_ADDR 8
+
+#define STR_ENDLINE 	"\r\n"
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
 #define LED_OFF 	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET)
 #define LED_ON		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET)
 #define LED_TOOGLE 	HAL_GPIO_Toggle(LED_GPIO_Port, LED_Pin)
@@ -51,14 +63,7 @@
 #define MKEY_READ	HAL_GPIO_ReadPin(MKEY_GPIO_Port, MKEY_Pin)
 #define RKEY_READ	HAL_GPIO_ReadPin(RKEY_GPIO_Port, RKEY_Pin)
 
-#define BUFFER_SIZE	10
-
-#define STR_ENDLINE 	"\r\n"
 #define PRINT_EOL	printf(STR_ENDLINE)
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
 
 /* USER CODE END PM */
 
@@ -67,7 +72,7 @@
 /* USER CODE BEGIN PV */
 HX711_HandleTypeDef scale;
 HX711_ScalingTypeDef transferFn;
-char numStr[10];
+char numStr[STR_BUFFER_SIZE];
 
 uint32_t buffer[BUFFER_SIZE];
 
