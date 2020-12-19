@@ -58,7 +58,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define LED_OFF 	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET)
+#define LED_OFF 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET)
 #define LED_ON		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET)
 #define LED_TOOGLE 	HAL_GPIO_Toggle(LED_GPIO_Port, LED_Pin)
 #define LKEY_READ	HAL_GPIO_ReadPin(LKEY_GPIO_Port, LKEY_Pin)
