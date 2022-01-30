@@ -1,0 +1,6 @@
+(sym_lib_table
+  (lib (name "pl_esp32")(type "KiCad")(uri "${KIPRJMOD}/lib_sch/pl_esp/pl_esp32.kicad_sym")(options "")(descr ""))
+  (lib (name "pl_dcdc")(type "KiCad")(uri "${KIPRJMOD}/lib_sch/pl_dcdc/pl_dcdc.kicad_sym")(options "")(descr ""))
+  (lib (name "pl_display")(type "KiCad")(uri "${KIPRJMOD}/lib_sch/pl_display/pl_display.kicad_sym")(options "")(descr ""))
+  (lib (name "pl_scale")(type "KiCad")(uri "${KIPRJMOD}/lib_sch/pl_scale/pl_scale.kicad_sym")(options "")(descr ""))
+)
