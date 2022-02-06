@@ -4,8 +4,8 @@
 #include <Arduino.h>
 
 /* Defines ------------------------------------------------------------------- */
-#define LOADCELL_DOUT_PIN   2
-#define LOADCELL_SCK_PIN    3
+#define LOADCELL_DOUT_PIN   33
+#define LOADCELL_SCK_PIN    32
 
 #define BKP_NAMESPACE		"bkp"			/* namespace where settings are stored */
 #define BKP_SSID_ADDR		"ssid"			/* keyword where SSID string is stored */
