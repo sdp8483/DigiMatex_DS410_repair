@@ -442,11 +442,6 @@
         "microvia_drill": 0.1,
         "name": "esp32",
         "nets": [
-          "/CLK",
-          "/CS",
-          "/DT",
-          "/MOSI",
-          "/SCK",
           "/WiFi_LED",
           "/b_display",
           "/b_tare",
@@ -501,7 +496,6 @@
           "/B-",
           "/E+",
           "/E-",
-          "Net-(J3-Pad1)",
           "Net-(J3-Pad2)"
         ],
         "pcb_color": "rgba(0, 0, 0, 0.000)",
