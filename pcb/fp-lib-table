@@ -5,4 +5,5 @@
   (lib (name "pl_scale")(type "KiCad")(uri "${KIPRJMOD}/lib_fp/pl_scale.pretty")(options "")(descr ""))
   (lib (name "pl_TerminalBlock")(type "KiCad")(uri "${KIPRJMOD}/lib_fp/pl_TerminalBlock.pretty")(options "")(descr ""))
   (lib (name "pl_heatsink")(type "KiCad")(uri "${KIPRJMOD}/lib_fp/pl_heatsink.pretty")(options "")(descr ""))
+  (lib (name "pl_logo")(type "KiCad")(uri "${KIPRJMOD}/lib_fp/pl_logo.pretty")(options "")(descr ""))
 )
