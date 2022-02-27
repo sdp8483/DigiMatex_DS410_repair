@@ -5761,11 +5761,11 @@
     (property "Sheet file" "load_cell_amp_adc.kicad_sch" (id 1) (at 81.28 141.5546 0)
       (effects (font (size 1.27 1.27)) (justify left top))
     )
-    (pin "SCK" input (at 81.28 132.08 180)
+    (pin "SCK" input (at 81.28 134.62 180)
       (effects (font (size 1.27 1.27)) (justify left))
       (uuid d634a7ac-0794-4ed6-8037-718daeeae7ac)
     )
-    (pin "DT" input (at 81.28 134.62 180)
+    (pin "DT" input (at 81.28 132.08 180)
       (effects (font (size 1.27 1.27)) (justify left))
       (uuid 99742767-6b1b-4df7-b7e5-7a776ea8a858)
     )
@@ -6003,7 +6003,7 @@
       (reference "C12") (unit 1) (value "100n") (footprint "Capacitor_SMD:C_0603_1608Metric")
     )
     (path "/b15ac447-b464-4fdc-8fab-1e76e308caef/a5cfd453-563e-4a0c-a405-86a4a4eaaaf9"
-      (reference "C13") (unit 1) (value "10u") (footprint "Capacitor_SMD:C_1210_3225Metric_Pad1.33x2.70mm_HandSolder")
+      (reference "C13") (unit 1) (value "10u") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
     (path "/b15ac447-b464-4fdc-8fab-1e76e308caef/2863324e-f952-45aa-9849-9bd1c78b3969"
       (reference "C14") (unit 1) (value "100n") (footprint "Capacitor_SMD:C_0603_1608Metric")
@@ -6012,7 +6012,7 @@
       (reference "C15") (unit 1) (value "100n") (footprint "Capacitor_SMD:C_0603_1608Metric")
     )
     (path "/b15ac447-b464-4fdc-8fab-1e76e308caef/d2655d0a-ba89-4028-b480-9460e909a178"
-      (reference "C16") (unit 1) (value "10u") (footprint "Capacitor_SMD:C_1210_3225Metric_Pad1.33x2.70mm_HandSolder")
+      (reference "C16") (unit 1) (value "10u") (footprint "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder")
     )
     (path "/b15ac447-b464-4fdc-8fab-1e76e308caef/24b4d1bb-1df9-45fb-b154-5b56a30b369e"
       (reference "C17") (unit 1) (value "100n") (footprint "Capacitor_SMD:C_0603_1608Metric")
