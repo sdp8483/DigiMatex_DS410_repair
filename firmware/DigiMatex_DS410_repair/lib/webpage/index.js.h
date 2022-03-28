@@ -5,8 +5,6 @@
 
 const char PAGE_index_JS[] PROGMEM = R"=====(
 var webSocket;
-var wsCount;
-var esp32_millis;
             
 function initIndex() {
     /* connect to websocket server */
@@ -17,12 +15,13 @@ function initIndex() {
     webSocket.onclose = function(event) {wsClose(event)};
     webSocket.onmessage = function(event) {wsReceive(event)};
     webSocket.onerror = function(event) {wsError(event)};
-
-    wsCount = 0;
 }
 
 function wsOpen(event) {
     console.log("Connected");
+
+    /* get init data */
+    wsSend(2);
 }
 
 function wsClose(event) {
@@ -37,38 +36,92 @@ function wsError(event) {
 }
 
 function wsReceive(event) {
-    if ((event.data != null) && (event.data != undefined) && (event.data != "")) {
+    if ((event.data !== null) && (event.data !== undefined) && (event.data != "")) {
         if (event.data[0] == '{') {
+            console.log("Received JSON data: " + event.data);
+
             var data = JSON.parse(event.data);
-            esp32_millis = data.millis;
 
-            /* update the input boxes only once */
-            if(wsCount < 10) {
-                wsCount = wsCount + 1;
-
-                document.getElementById("fw_info").value = data.version + " " + data.compile_date + " " + data.compile_time;
-                document.getElementById("ssid").value = data.ssid;
+            switch(data.action) {
+                case 2:
+                    parseInitData(data);
+                    break;
+                case 6:
+                    document.getElementById("raw").value = data.raw;
+                    document.getElementById("weight").value = data.weight;
+                    break;
+                default:
+                    break;
             }
         }
     }
 }
 
-function wsSend() {
-    var data;
+function parseInitData(data) {
+    document.getElementById("units").value = data.units;
+    document.getElementById("avg").value = data.avg;
 
-    data = JSON.stringify({ 'action': 1});
+    document.getElementById("brightness").value = data.brightness;
 
-    console.log("Sending: " + data);
-    webSocket.send(data);
+    document.getElementById("cal").value = data.cal;
+    document.getElementById("factor").value = data.factor;
+    document.getElementById("offset").value = data.offset;
 
-    wsCount = 0;
+    document.getElementById("fw_info").value = data.version + " " + data.compile_date + " " + data.compile_time;
+    document.getElementById("ssid").value = data.ssid;
+}
+
+function wsSend(a) {
+    if (a === undefined) {
+        console.log("action was undefined");
+    } else {
+        var data = {action: a};
+        const array = [];
+
+        switch (a) {
+            case 1:
+                console.log("Resetting SSID to default");
+                break;
+            case 3:
+                console.log("Pausing ws");
+                break;
+            case 4:
+                console.log("Resuming ws");
+                break;
+            case 2:
+                console.log("Requesting Init Data");
+                break;
+            case 5:
+                console.log("Updating settings")
+                data.units = document.getElementById("units").value;
+                data.avg = document.getElementById("avg").value;
+                data.brightness = document.getElementById("brightness").value;
+                data.cal = document.getElementById("cal").value;
+                break;
+            case 7:
+                console.log("taring");
+                break;
+            case 8:
+                console.log("calibrating");
+                data.cal = document.getElementById("cal").value;
+                break;
+            default:
+                console.log("default");
+        }
+        var d = JSON.stringify(data);
+
+        console.log("Sending: " + d);
+        webSocket.send(d);
+    }
+
+    return false;
 }
 
 function ssidUpdate() {
     var ssid = document.getElementById("ssid").value;
     var data;
 
-    if(ssid != null) {
+    if((ssid !== null) && (ssid.length != 0)) {
         data = JSON.stringify({'action': 0,
                                'ssid': ssid});
         console.log("Sending: " + data);

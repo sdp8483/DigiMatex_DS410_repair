@@ -4,72 +4,32 @@
 #include <Arduino.h>
 
 const char PAGE_style_CSS[] PROGMEM = R"=====(
-section {
-    margin: 1.5em;
-    border: 1px solid black;
-    padding: 1em;
-}
+/* DigiMatex DS410 Style 1.0 March 2022 - Sam Perry */
 
-section>h2 {
-    background-color: white;
-    margin-top: -1.5em;
-    width: max-content;
-    padding: 0 0.5em;
-    margin-left: 0.5em;
-}
+/* section box style from github.com/atc1441/ESP32_nRF52_SWD */
+section {margin: 1.5em;border: 1px solid black; padding: 1em;}
+section>h2 {background-color: white; margin-top: -1.5em; width: max-content; padding: 0 0.5em; margin-left: 0.5em;}
 
-label {
-    display: inline-block;
-    width: 180px;
-}
+/* input style with fixed width */
+label {display: inline-block; width: 180px;}
+input {display: inline-block; width: 200px; font-size: 14px; border-style: groove; border-width: 2px; border-radius: 4px; border-color: lightgray; padding: 1px 2px 1px 2px;}
+input:invalid {border: red solid 3px;}
+input[type=submit] {margin-left: 184px; width: 208px;}
 
-input {
-    display: inline-block;
-    width: 200px;
-}
+/* Output style similar to input */
+output {display: inline-block; width: 200px; font-size: 14px; border-style: groove; border-width: 2px; border-radius: 4px; border-color: lightgray; padding: 1px 2px 1px 2px;}
+output:empty::before {content: "\200b";   /* unicode zero width space character */}
 
-input[type=checkbox] {
-    width: auto;
-    margin-left: 0;
-}
+/* fixed width select */
+select {display: inline-block; width: 208px; padding-left: 0; padding-right: 0;}
 
-select {
-    display: inline-block;
-    width: 208px;
-    padding-left: 0;
-    padding-right: 0;
-}
+/* button placed inline with input or output */
+button.rightButton {width: 86px;}
 
-input[type=text]:disabled {
-    color: black;
-}
+/* button to submit settings */
+button.submit-action {margin-left: 184px; width: 208px;}
 
-input[type=number]:disabled {
-    color: black;
-}
-
-table, th, td {
-    border-collapse: collapse;
-}
-
-th {
-    background-color: #888888;
-    padding-right: 10px;
-    padding-left: 10px;
-    text-align: left;
-}
-
-td {
-    padding-right: 10px;
-    padding-left: 10px;
-    text-align: left;
-}
-
-tr:nth-child(odd) {
-    background-color: #CCCCCC;
-}
-
-tr:hover {
-    background-color: yellow;
-})=====";
+/* control buttons */
+button.control {width: 208px; display: block; margin-bottom: 5px;}
+button.control-right {width: 208px; display: block; margin-bottom: 5px; margin-left: 184px;})=====";
 #endif

@@ -4,9 +4,10 @@
 #include <TaskScheduler.h>
 
 #include "LedControl.h"                   /* MAX7219 7-segment Display -------*/
-#include "HX711.h"                        /* Weight Scale IC */
+#include "HX711.h"                        /* Weight Scale IC -----------------*/
 
 #include "settings.h"
+#include "debug_print.h"
 
 #define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
@@ -27,7 +28,7 @@
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
-#define DEVICE_NAME			"DigiMatex DS410"
+// #define DEVICE_NAME			"DigiMatex DS410"
 /* Version should be interpreted as: (MAIN).(TOPIC).(FUNCTION).(BUGFIX)
  * 		MAIN marks major milestones of the project such as release
  * 		TOPIC marks the introduction of a new functionality or major changes
@@ -38,9 +39,6 @@
 #define FW_VERSION			"V0.1.0.0"
 
 /* WiFi Settings -------------------------------------------------------------*/
-#define SSID_LEN			32				        /* sources suggest SSID length has a max of 32 characters */
-String ssid_str = DEVICE_NAME + String(" ");
-
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
@@ -48,24 +46,22 @@ AsyncWebSocket ws("/ws");
 StaticJsonDocument<1028> wsData;
 
 /* Private macro -------------------------------------------------------------*/
-#if DEBUG_MESSAGES
-#define debugLog(x) 	Serial.print(x)
-#define debugLogln(x)	Serial.println(x)
-#else
-#define debugLog(x)
-#define debugLogln(x)
-#endif
 
 /* Private variables ---------------------------------------------------------*/
-Preferences bkp;							          /* non volatile settings storage */
-Settings_Handle_t hs;						        /* setttings handle */
-LedControl lc=LedControl(MOSI, SCK, SS);/* MAX7219 7-segment */
+Preferences bkp;							        /* non volatile settings storage */
+Settings settings;									/* all the settings */
+
+LedControl lc=LedControl(DISPLAY_MOSI_PIN, 			/* MAX7219 7-segment */
+						 DISPLAY_CLK_PIN, 
+						 DISPLAY_CS_PIN);
 HX711 scale;
-unsigned long delaytime=250;
+long scale_raw;
+float scale_units;
 
 /* Private function prototypes -----------------------------------------------*/
-void writeArduinoOn7Segment(void);
-void scrollDigits(void);
+void displayTest(void);
+void updateDisplay(void);
+void readScale(void);
 
 /* Webserver Handles ---------------------------------------------------------*/
 void handleIndex(AsyncWebServerRequest *request);
@@ -73,57 +69,54 @@ void handleIndexJS(AsyncWebServerRequest *request);
 void handleCSS(AsyncWebServerRequest * request);
 void handleNotFound(AsyncWebServerRequest *request);
 void handleInvalidRequest(AsyncWebServerRequest *request);
+
+/* Websocket functions -------------------------------------------------------*/
 void onWsEvent(AsyncWebSocket *server, 
 			   AsyncWebSocketClient *client, 
 			   AwsEventType type, 
 			   void *arg, 
 			   uint8_t *data, 
 			   size_t len);
-void wsReceiveParse(uint8_t *data, size_t len);
+void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len);
+void wsSendInitData(uint32_t client_id);
 void wsStream();
 
 /* Task Scheduler ------------------------------------------------------------*/
 Scheduler runner;
 Task wsTask(WS_TRANSMIT_RATE_ms, TASK_FOREVER, &wsStream);
+Task scaleTask(SCALE_RATE_ms, TASK_FOREVER, &readScale);
+Task displayTask(DISPLAY_RATE_ms, TASK_FOREVER, &updateDisplay);
 
 void setup() {
 	Serial.begin(115200);
 
-	/* Get settings from EEPROM or use defaults if not set */
-	bkp.begin(BKP_NAMESPACE);
+	/* setup LED pins */
+	pinMode(LED_WIFI_PIN, OUTPUT);
+	pinMode(LED_LBS_PIN, OUTPUT);
+	pinMode(LED_KG_PIN, OUTPUT);
+
+	/* setup button pins */
+	pinMode(BUTTON_DISPLAY_PIN, INPUT_PULLUP);
+	pinMode(BUTTON_TARE_PIN, INPUT_PULLUP);
+	pinMode(BUTTON_UNIT_PIN, INPUT_PULLUP);
+
+	/* initialize settings and get from eeprom */
+	settings.begin();
 
 	/* setup task scheduler */
 	runner.init();
 
-  /* 7-segment */
-  /*
-  The MAX72XX is in power-saving mode on startup,
-  we have to do a wakeup call
-  */
-  lc.shutdown(0,false);
-  /* Set the brightness to a medium values */
-  lc.setIntensity(0,8);
-  /* and clear the display */
-  lc.clearDisplay(0);
+	/* 7-segment */
+	lc.shutdown(0,false);		/* wakeup */
+	lc.setIntensity(0, settings.display.intensity);
+	lc.clearDisplay(0);
 
-  /* scale */
-  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-
-	/* setup default SSID with chip ID */
-	ssid_str.reserve(SSID_LEN);
-	uint32_t chipId = 0;
-	for (uint8_t i=0; i<17; i+=8) {
-		chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
-	}
-	ssid_str += String(chipId, HEX);
-
-	/* retreive user set SSID if avaliable, use above if not */
-	ssid_str = bkp.getString(BKP_SSID_ADDR, ssid_str);
-	bkp.end();
+	/* scale */
+	scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
 
 	/* start WiFi ap -------------------- */
 	debugLogln(F("Setting AP ..."));
-	WiFi.softAP(ssid_str.c_str());
+	WiFi.softAP(settings.ssid_str.c_str());
 	IPAddress IP = WiFi.softAPIP();
 	debugLog(F("AP IP address: "));
 	debugLogln(IP);
@@ -140,45 +133,65 @@ void setup() {
 
 	AsyncElegantOTA.begin(&server);
 	server.begin();
+
+	displayTest();
+
+	/* start scale reading and display */
+	runner.addTask(scaleTask);
+	runner.addTask(displayTask);
+	scaleTask.enable();
+	displayTask.enable();
 }
 
 void loop() {
 	runner.execute();
 	ws.cleanupClients();
-
-  writeArduinoOn7Segment();
-  scrollDigits();
 }
 
-void writeArduinoOn7Segment() {
-  lc.setChar(0,6,'a',false);
-  delay(delaytime);
-  lc.setRow(0,5,0x05);
-  delay(delaytime);
-  lc.setChar(0,4,'d',false);
-  delay(delaytime);
-  lc.setRow(0,3,0x1c);
-  delay(delaytime);
-  lc.setRow(0,2,B00010000);
-  delay(delaytime);
-  lc.setRow(0,1,0x15);
-  delay(delaytime);
-  lc.setRow(0,0,0x1D);
-  delay(delaytime);
-  lc.clearDisplay(0);
-  delay(delaytime);
+void displayTest() {
+	lc.clearDisplay(0);
+
+	digitalWrite(LED_WIFI_PIN, HIGH);
+	digitalWrite(LED_LBS_PIN, HIGH);
+	digitalWrite(LED_KG_PIN, HIGH);
+
+	/* Scroll through digits */
+	for (int i=0; i<16; i++) {
+		for (int d=0; d<8; d++) {
+			lc.setDigit(0, d, i, true);
+		}
+		delay(250);
+	}
+
+	digitalWrite(LED_WIFI_PIN, LOW);
+	digitalWrite(LED_LBS_PIN, LOW);
+	digitalWrite(LED_KG_PIN, LOW);
+
+	lc.clearDisplay(0);
 }
 
-void scrollDigits() {
-  for(int i=0;i<13;i++) {
-    lc.setDigit(0,3,i,false);
-    lc.setDigit(0,2,i+1,false);
-    lc.setDigit(0,1,i+2,false);
-    lc.setDigit(0,0,i+3,false);
-    delay(delaytime);
-  }
-  lc.clearDisplay(0);
-  delay(delaytime);
+/* Scale Function ------------------------------------------------------------ */
+void readScale(void) {
+	scale_raw = scale.read_average(settings.scale.averaging);
+	scale_units = (scale_raw - scale.get_offset()) / scale.get_scale();
+}
+
+/* display update ------------------------------------------------------------ */
+void updateDisplay(void) {
+	uint32_t divisor = 1;
+	uint8_t num;
+
+	lc.clearDisplay(0);
+
+	for (int i=0; i<8; i++) {
+		if ((abs(scale_raw) / divisor) <= 0) {
+			break;
+		} else {
+			num = (abs(scale_raw) / divisor) % 10;
+			lc.setDigit(0, i, num, false);
+			divisor *= 10;
+		}
+	}
 }
 
 /* Webserver Handlers -------------------------------------------------------- */
@@ -212,14 +225,10 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 			Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
     		client->printf("Hello Client %u :)", client->id());
     		client->ping();
-			runner.addTask(wsTask);
-			wsTask.enable();
 			break;
 		case WS_EVT_DISCONNECT:
 			/* client disconnected */
 			Serial.printf("ws[%s][%u] disconnect\n", server->url(), client->id());
-			wsTask.disable();
-			runner.deleteTask(wsTask);
 			break;
 		case WS_EVT_ERROR:
 			/* error was received from the other end */
@@ -238,7 +247,8 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 				if(info->opcode == WS_TEXT) {
 					data[len] = 0;
 					Serial.printf("%s\n", (char*)data);
-					wsReceiveParse(data, info->len);
+
+					wsReceiveParse(client, data, info->len);
 				} else {
 					for(size_t i=0; i < info->len; i++){
 						Serial.printf("%02x ", data[i]);
@@ -288,7 +298,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 	}
 }
 
-void wsReceiveParse(uint8_t *data, size_t len) {
+void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
 	/* get data from JSON */
 	DeserializationError error = deserializeJson(wsData, data, len);
 
@@ -298,27 +308,84 @@ void wsReceiveParse(uint8_t *data, size_t len) {
 	}
 
 	switch (wsData["action"].as<uint8_t>()) {
-	case ACTION_SSID_UPDATE:			/* update ssid */
-		bkp.begin(BKP_NAMESPACE, false);
-		ssid_str = wsData["ssid"].as<String>();
-		bkp.putString(BKP_SSID_ADDR, ssid_str);
-		bkp.end();
-		ESP.restart();
-		break;
-	default:
-		break;
+		case ACTION_SSID_UPDATE:
+			settings.setSSID(wsData["ssid"].as<String>());
+			ESP.restart();
+			break;
+		case ACTION_SSID_RESET:
+			settings.resetSSID();
+			ESP.restart();
+			break;
+		case ACTION_INIT_DATA:
+			wsSendInitData((uint32_t)client->id());
+			break;
+		case ACTION_PAUSE_STREAM:
+			wsTask.disable();
+			runner.deleteTask(wsTask);
+			break;
+		case ACTION_RESUME_STREAM:
+			runner.addTask(wsTask);
+			wsTask.enable();
+			break;
+		case ACTION_SETTINGS_UPDATE:
+			settings.scale.units = wsData["units"].as<uint8_t>();
+			settings.scale.averaging = wsData["avg"].as<uint8_t>();
+			settings.scale.cal_weight = wsData["cal"].as<float>();
+
+			settings.display.intensity = wsData["brightness"].as<uint8_t>();
+			lc.setIntensity(0, settings.display.intensity);
+
+			settings.putData(SCALE_NVS, &settings.scale, sizeof(settings.scale));
+			settings.putData(DISPLAY_NVS, &settings.display, sizeof(settings.display));
+			break;
+		case ACTION_TARE:
+			scale.tare(settings.scale.averaging);
+			wsSendInitData((uint32_t)client->id());		/* offset has changed so resend data */
+			break;
+		case ACTION_CALIBRATE:
+			settings.scale.factor = 1.0f;
+			scale.set_scale(settings.scale.factor);
+
+			settings.putData(SCALE_NVS, &settings.scale, sizeof(settings.scale));
+
+			wsSendInitData((uint32_t)client->id());		/* scale factor has changed so resend data */
+			break;
+		default:
+			break;
 	}
 }
 
-/* Task Schedular Functions -------------------------------------------------- */
-void wsStream() {
-	StaticJsonDocument<2048> data;
+void wsSendInitData(uint32_t client_id) {
+	StaticJsonDocument<1024> data;
+
+	data["action"]			= ACTION_INIT_DATA;
 
 	data["compile_date"] 	= __DATE__;
 	data["compile_time"] 	= __TIME__;
 	data["version"] 		= FW_VERSION;
-	data["ssid"] 			= ssid_str;
-	data["millis"] 			= millis();
+	data["ssid"] 			= settings.ssid_str;
+
+	data["units"]			= settings.scale.units;
+	data["avg"]				= settings.scale.averaging;
+	data["cal"]				= settings.scale.cal_weight;
+	data["factor"]			= settings.scale.factor;
+	data["offset"]			= scale.get_offset();
+
+	data["brightness"]		= settings.display.intensity;
+	
+	String json;
+	serializeJson(data, json);
+
+	ws.text(client_id, json.c_str(), json.length());
+}
+
+/* Task Schedular Functions -------------------------------------------------- */
+void wsStream() {
+	StaticJsonDocument<64> data;
+	
+	data["action"]			= ACTION_SCALE_VALUE;
+	data["raw"]				= scale_raw;
+	data["weight"]			= scale_units;
 
 	String json;
 	serializeJson(data, json);
