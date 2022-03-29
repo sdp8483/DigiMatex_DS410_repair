@@ -53,7 +53,7 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
         </div>
         <div>
             <label for="dec">Decimal Places</label>
-            <input typ="number" id="dec" min="0" max="6">
+            <input type="number" id="dec" min="0" max="6">
         </div>
         <button class="control-right" onclick="wsSend(5)">Update</button>
     </section>
