@@ -58,10 +58,13 @@ HX711 scale;
 long scale_raw;
 float scale_units;
 
+uint8_t softAPStationNum_last = 0;
+
 /* Private function prototypes -----------------------------------------------*/
 void displayTest(void);
 void updateDisplay(void);
 void readScale(void);
+void ledWrite(uint8_t led_pin, uint8_t val);
 
 /* Webserver Handles ---------------------------------------------------------*/
 void handleIndex(AsyncWebServerRequest *request);
@@ -153,15 +156,36 @@ void setup() {
 void loop() {
 	runner.execute();
 	ws.cleanupClients();
+
+	/* set WiFi LED */
+	uint8_t num = WiFi.softAPgetStationNum();
+	if (num != softAPStationNum_last) {
+		softAPStationNum_last = num;
+		if (num > 0) {
+			ledWrite(LED_WIFI_PIN, HIGH);
+		} else {
+			ledWrite(LED_WIFI_PIN, LOW);
+		}
+	}
+}
+
+void ledWrite(uint8_t led_pin, uint8_t val) {
+	if (val == HIGH) {
+		ledcAttachPin(led_pin, LED_PWM_CH);
+	} else {
+		ledcDetachPin(led_pin);
+		pinMode(led_pin, OUTPUT);
+		digitalWrite(led_pin, LOW);
+	}
 }
 
 void displayTest() {
 	lc.clearDisplay(0);
 
 	ledcWrite(LED_PWM_CH, settings.display.intensity);
-	ledcAttachPin(LED_WIFI_PIN, LED_PWM_CH);
-	ledcAttachPin(LED_LBS_PIN, LED_PWM_CH);
-	ledcAttachPin(LED_KG_PIN, LED_PWM_CH);
+	ledWrite(LED_WIFI_PIN, HIGH);
+	ledWrite(LED_LBS_PIN, HIGH);
+	ledWrite(LED_KG_PIN, HIGH);
 
 	/* Scroll through digits */
 	for (int i=0; i<16; i++) {
@@ -171,15 +195,9 @@ void displayTest() {
 		delay(250);
 	}
 
-	ledcDetachPin(LED_WIFI_PIN);
-	ledcDetachPin(LED_LBS_PIN);
-	ledcDetachPin(LED_KG_PIN);
-	pinMode(LED_WIFI_PIN, OUTPUT);
-	pinMode(LED_LBS_PIN, OUTPUT);
-	pinMode(LED_KG_PIN, OUTPUT);
-	digitalWrite(LED_WIFI_PIN, LOW);
-	digitalWrite(LED_LBS_PIN, LOW);
-	digitalWrite(LED_KG_PIN, LOW);
+	ledWrite(LED_WIFI_PIN, LOW);
+	ledWrite(LED_LBS_PIN, LOW);
+	ledWrite(LED_KG_PIN, LOW);
 
 	lc.clearDisplay(0);
 }
@@ -209,15 +227,11 @@ void updateDisplay(void) {
 	if (units_last != settings.scale.units) {
 		units_last = settings.scale.units;
 		if (settings.scale.units == UNITS_LBS) {
-			ledcAttachPin(LED_LBS_PIN, LED_PWM_CH);
-			ledcDetachPin(LED_KG_PIN);
-			pinMode(LED_KG_PIN, OUTPUT);
-			digitalWrite(LED_KG_PIN, LOW);
+			ledWrite(LED_LBS_PIN, HIGH);
+			ledWrite(LED_KG_PIN, LOW);
 		} else {
-			ledcAttachPin(LED_KG_PIN, LED_PWM_CH);
-			ledcDetachPin(LED_LBS_PIN);
-			pinMode(LED_LBS_PIN, OUTPUT);
-			digitalWrite(LED_LBS_PIN, LOW);
+			ledWrite(LED_LBS_PIN, LOW);
+			ledWrite(LED_KG_PIN, HIGH);
 		}
 	}
 
