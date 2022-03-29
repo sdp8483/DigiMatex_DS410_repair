@@ -51,6 +51,10 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
             <label for="brightness">Display Brightness</label>
             <input type="number" id="brightness" min="0" max="15">
         </div>
+        <div>
+            <label for="dec">Decimal Places</label>
+            <input typ="number" id="dec" min="0" max="6">
+        </div>
         <button class="control-right" onclick="wsSend(5)">Update</button>
     </section>
 

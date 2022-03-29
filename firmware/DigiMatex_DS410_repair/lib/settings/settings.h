@@ -51,6 +51,7 @@ typedef struct __scale_settings_t {
 
 typedef struct __display_settings_t {
     uint8_t intensity;                      /* display brightness 0 to 15 */
+    uint8_t decimal_places;                 /* decimal places to show */
 } Display_Settings_t;
 
 /* Globals ------------------------------------------------------------------- */

@@ -236,7 +236,7 @@ void updateDisplay(void) {
 	}
 
 	/* move over two decimal places */
-	int32_t val = (int32_t) (scale_units * 100.0f);
+	int32_t val = (int32_t) (scale_units * (pow(10.0f, settings.display.decimal_places)));
 
 	lc.clearDisplay(0);
 
@@ -245,12 +245,12 @@ void updateDisplay(void) {
 	}
 
 	for (int i=0; i<8; i++) {
-		if (((abs(val) / divisor) <= 0) && (i>2)) {
+		if (((abs(val) / divisor) <= 0) && (i>settings.display.decimal_places)) {
 			lc.setChar(0, i, sign, false);
 			break;
 		} else {
 			num = (abs(val) / divisor) % 10;
-			if (i==2) {
+			if (i==settings.display.decimal_places) {
 				lc.setDigit(0, i, num, true);	/* set decimal place */
 			} else {
 				lc.setDigit(0, i, num, false);
@@ -402,6 +402,8 @@ void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
 			ledcWrite(LED_PWM_CH, settings.display.intensity);
 			lc.setIntensity(0, settings.display.intensity);
 
+			settings.display.decimal_places = wsData["dec"].as<uint8_t>();
+
 			settings.putData(SCALE_NVS, &settings.scale, sizeof(settings.scale));
 			settings.putData(DISPLAY_NVS, &settings.display, sizeof(settings.display));
 			break;
@@ -448,6 +450,7 @@ void wsSendInitData(uint32_t client_id) {
 	data["offset"]			= scale.get_offset();
 
 	data["brightness"]		= settings.display.intensity;
+	data["dec"]				= settings.display.decimal_places;
 	
 	String json;
 	serializeJson(data, json);
