@@ -78,8 +78,8 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
     <section>
         <h2>About</h2>
         <div> 
-            <label for="ssid">SSID</label>
-            <input type="text" id="ssid" name="ssid" maxlength="30">
+            <label for="ssi">SSID</label>
+            <input type="text" id="ssi" name="ssi" maxlength="30">
             <button type="button" class="rightButton" onclick="ssidUpdate()">Update SSID</button>
         </div>
         <div>

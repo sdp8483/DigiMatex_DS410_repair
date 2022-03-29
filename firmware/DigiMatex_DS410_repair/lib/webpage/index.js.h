@@ -63,7 +63,7 @@ function parseInitData(data) {
     document.getElementById("avg").value = data.avg;
 
     document.getElementById("brightness").value = data.brightness;
-    
+
     dec = data.dec;
     document.getElementById("dec").value = dec;
 
@@ -72,7 +72,7 @@ function parseInitData(data) {
     document.getElementById("offset").value = data.offset;
 
     document.getElementById("fw_info").value = data.version + " " + data.compile_date + " " + data.compile_time;
-    document.getElementById("ssid").value = data.ssid;
+    document.getElementById("ssi").value = data.ssid;
 }
 
 function wsSend(a) {
@@ -125,7 +125,7 @@ function wsSend(a) {
 }
 
 function ssidUpdate() {
-    var ssid = document.getElementById("ssid").value;
+    var ssid = document.getElementById("ssi").value;
     var data;
 
     if((ssid !== null) && (ssid.length != 0)) {
