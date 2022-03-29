@@ -58,6 +58,10 @@ HX711 scale;
 long scale_raw;
 float scale_units;
 
+#define SCALE_WINDOW_LEN	25
+long scale_window[SCALE_WINDOW_LEN];
+int16_t scale_window_index = 0;
+
 uint8_t softAPStationNum_last = 0;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -204,7 +208,22 @@ void displayTest() {
 
 /* Scale Function ------------------------------------------------------------ */
 void readScale(void) {
-	scale_raw = scale.read_average(settings.scale.averaging);
+	scale_window[scale_window_index] = scale.read();
+	scale_window_index++;
+
+	// scale_window_index = constrain(scale_window_index, 0, SCALE_WINDOW_LEN);
+	if (scale_window_index >= SCALE_WINDOW_LEN) {
+		scale_window_index = 0;
+	}
+
+	long sum = 0;
+	for (uint8_t i=0; i<SCALE_WINDOW_LEN; i++) {
+		sum += scale_window[i];
+	}
+
+	scale_raw = sum/SCALE_WINDOW_LEN;
+
+	// scale_raw = scale.read_average(settings.scale.averaging);
 
 	if (settings.scale.units == settings.scale.cal_units) {
 		scale_units = (scale_raw - scale.get_offset()) / scale.get_scale();

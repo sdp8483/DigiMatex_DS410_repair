@@ -6,7 +6,7 @@
 #include "debug_print.h"
 
 /* Defines ------------------------------------------------------------------- */
-#define SCALE_RATE_ms       1000
+#define SCALE_RATE_ms       250
 #define DISPLAY_RATE_ms     500
 
 #define LOADCELL_DOUT_PIN   32
