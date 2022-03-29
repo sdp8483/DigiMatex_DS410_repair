@@ -58,7 +58,7 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
         <h2>Calibration</h2>
         <div>
             <label for="cal">Calibration Weight</label>
-            <input type="number" id="cal">
+            <input type="number" id="cal" min="0" max="300" step="0.01">
             <button class="rightButton" onclick="wsSend(8)">Calibrate</button>
         </div>
         <div>

@@ -42,7 +42,7 @@ function wsReceive(event) {
                     break;
                 case ACTION_SCALE_VALUE:
                     document.getElementById("raw").value = data.raw;
-                    document.getElementById("weight").value = data.weight;
+                    document.getElementById("weight").value = data.weight.toFixed(2);
                     break;
                 default:
                     break;
@@ -57,7 +57,7 @@ function parseInitData(data) {
 
     document.getElementById("brightness").value = data.brightness;
 
-    document.getElementById("cal").value = data.cal;
+    document.getElementById("cal").value = data.cal.toFixed(2);
     document.getElementById("factor").value = data.factor;
     document.getElementById("offset").value = data.offset;
 
@@ -98,6 +98,7 @@ function wsSend(a) {
             case ACTION_CALIBRATE:
                 console.log("calibrating");
                 data.cal = document.getElementById("cal").value;
+                data.units = document.getElementById("units").value;
                 break;
             default:
                 console.log("default");

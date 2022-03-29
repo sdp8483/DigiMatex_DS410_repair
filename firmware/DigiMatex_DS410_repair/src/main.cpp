@@ -90,10 +90,14 @@ Task displayTask(DISPLAY_RATE_ms, TASK_FOREVER, &updateDisplay);
 void setup() {
 	Serial.begin(115200);
 
-	/* setup LED pins */
+	/* setup LEDs */
 	pinMode(LED_WIFI_PIN, OUTPUT);
 	pinMode(LED_LBS_PIN, OUTPUT);
 	pinMode(LED_KG_PIN, OUTPUT);
+	digitalWrite(LED_WIFI_PIN, LOW);
+	digitalWrite(LED_LBS_PIN, LOW);
+	digitalWrite(LED_KG_PIN, LOW);
+	ledcSetup(LED_PWM_CH, LED_FREQ, LED_PWM_RESOLUTION);
 
 	/* setup button pins */
 	pinMode(BUTTON_DISPLAY_PIN, INPUT_PULLUP);
@@ -136,6 +140,9 @@ void setup() {
 
 	displayTest();
 
+	scale.tare();
+	scale.set_scale(settings.scale.factor);
+
 	/* start scale reading and display */
 	runner.addTask(scaleTask);
 	runner.addTask(displayTask);
@@ -151,9 +158,10 @@ void loop() {
 void displayTest() {
 	lc.clearDisplay(0);
 
-	digitalWrite(LED_WIFI_PIN, HIGH);
-	digitalWrite(LED_LBS_PIN, HIGH);
-	digitalWrite(LED_KG_PIN, HIGH);
+	ledcWrite(LED_PWM_CH, settings.display.intensity);
+	ledcAttachPin(LED_WIFI_PIN, LED_PWM_CH);
+	ledcAttachPin(LED_LBS_PIN, LED_PWM_CH);
+	ledcAttachPin(LED_KG_PIN, LED_PWM_CH);
 
 	/* Scroll through digits */
 	for (int i=0; i<16; i++) {
@@ -163,6 +171,12 @@ void displayTest() {
 		delay(250);
 	}
 
+	ledcDetachPin(LED_WIFI_PIN);
+	ledcDetachPin(LED_LBS_PIN);
+	ledcDetachPin(LED_KG_PIN);
+	pinMode(LED_WIFI_PIN, OUTPUT);
+	pinMode(LED_LBS_PIN, OUTPUT);
+	pinMode(LED_KG_PIN, OUTPUT);
 	digitalWrite(LED_WIFI_PIN, LOW);
 	digitalWrite(LED_LBS_PIN, LOW);
 	digitalWrite(LED_KG_PIN, LOW);
@@ -173,22 +187,60 @@ void displayTest() {
 /* Scale Function ------------------------------------------------------------ */
 void readScale(void) {
 	scale_raw = scale.read_average(settings.scale.averaging);
-	scale_units = (scale_raw - scale.get_offset()) / scale.get_scale();
+
+	if (settings.scale.units == settings.scale.cal_units) {
+		scale_units = (scale_raw - scale.get_offset()) / scale.get_scale();
+	} else {
+		if (settings.scale.cal_units == UNITS_KG) {
+			scale_units = ((scale_raw - scale.get_offset()) / scale.get_scale()) * KG_TO_LBS;
+		} else {
+			scale_units = ((scale_raw - scale.get_offset()) / scale.get_scale()) * LBS_TO_KG;
+		}
+	}
 }
 
 /* display update ------------------------------------------------------------ */
 void updateDisplay(void) {
+	static uint8_t units_last = 255;
 	uint32_t divisor = 1;
 	uint8_t num;
+	char sign = ' ';
+
+	if (units_last != settings.scale.units) {
+		units_last = settings.scale.units;
+		if (settings.scale.units == UNITS_LBS) {
+			ledcAttachPin(LED_LBS_PIN, LED_PWM_CH);
+			ledcDetachPin(LED_KG_PIN);
+			pinMode(LED_KG_PIN, OUTPUT);
+			digitalWrite(LED_KG_PIN, LOW);
+		} else {
+			ledcAttachPin(LED_KG_PIN, LED_PWM_CH);
+			ledcDetachPin(LED_LBS_PIN);
+			pinMode(LED_LBS_PIN, OUTPUT);
+			digitalWrite(LED_LBS_PIN, LOW);
+		}
+	}
+
+	/* move over two decimal places */
+	int32_t val = (int32_t) (scale_units * 100.0f);
 
 	lc.clearDisplay(0);
 
+	if (val < 0) {
+		sign = '-';
+	}
+
 	for (int i=0; i<8; i++) {
-		if ((abs(scale_raw) / divisor) <= 0) {
+		if (((abs(val) / divisor) <= 0) && (i>2)) {
+			lc.setChar(0, i, sign, false);
 			break;
 		} else {
-			num = (abs(scale_raw) / divisor) % 10;
-			lc.setDigit(0, i, num, false);
+			num = (abs(val) / divisor) % 10;
+			if (i==2) {
+				lc.setDigit(0, i, num, true);	/* set decimal place */
+			} else {
+				lc.setDigit(0, i, num, false);
+			}
 			divisor *= 10;
 		}
 	}
@@ -333,6 +385,7 @@ void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
 			settings.scale.cal_weight = wsData["cal"].as<float>();
 
 			settings.display.intensity = wsData["brightness"].as<uint8_t>();
+			ledcWrite(LED_PWM_CH, settings.display.intensity);
 			lc.setIntensity(0, settings.display.intensity);
 
 			settings.putData(SCALE_NVS, &settings.scale, sizeof(settings.scale));
@@ -343,7 +396,16 @@ void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
 			wsSendInitData((uint32_t)client->id());		/* offset has changed so resend data */
 			break;
 		case ACTION_CALIBRATE:
+			/* reset scale factor */
 			settings.scale.factor = 1.0f;
+			scale.set_scale(settings.scale.factor);
+
+			/* get calibration weight */
+			settings.scale.cal_weight = wsData["cal"].as<float>();
+			settings.scale.cal_units = wsData["units"].as<uint8_t>();
+
+			/* calculate new scale factor */
+			settings.scale.factor = (scale_raw - scale.get_offset()) / settings.scale.cal_weight;
 			scale.set_scale(settings.scale.factor);
 
 			settings.putData(SCALE_NVS, &settings.scale, sizeof(settings.scale));
