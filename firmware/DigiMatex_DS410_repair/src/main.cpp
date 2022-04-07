@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <Preferences.h>
 #include <TaskScheduler.h>
+#include <Bounce2.h>
 
 #include "LedControl.h"                   /* MAX7219 7-segment Display -------*/
 #include "HX711.h"                        /* Weight Scale IC -----------------*/
@@ -54,19 +55,26 @@ Settings settings;									/* all the settings */
 LedControl lc=LedControl(DISPLAY_MOSI_PIN, 			/* MAX7219 7-segment */
 						 DISPLAY_CLK_PIN, 
 						 DISPLAY_CS_PIN);
+
+bool display_sleep = false;
+
 HX711 scale;
 long scale_raw;
 float scale_units;
 
-#define SCALE_WINDOW_LEN	25
+#define SCALE_WINDOW_LEN	255
 long scale_window[SCALE_WINDOW_LEN];
 int16_t scale_window_index = 0;
 
-uint8_t softAPStationNum_last = 0;
+Bounce2::Button displayButton = Bounce2::Button();
+Bounce2::Button tareButton = Bounce2::Button();
+Bounce2::Button unitButton = Bounce2::Button();
 
 /* Private function prototypes -----------------------------------------------*/
 void displayTest(void);
+void displayTare(void);
 void updateDisplay(void);
+void readButtons(void);
 void readScale(void);
 void ledWrite(uint8_t led_pin, uint8_t val);
 
@@ -106,10 +114,18 @@ void setup() {
 	digitalWrite(LED_KG_PIN, LOW);
 	ledcSetup(LED_PWM_CH, LED_FREQ, LED_PWM_RESOLUTION);
 
-	/* setup button pins */
-	pinMode(BUTTON_DISPLAY_PIN, INPUT_PULLUP);
-	pinMode(BUTTON_TARE_PIN, INPUT_PULLUP);
-	pinMode(BUTTON_UNIT_PIN, INPUT_PULLUP);
+	/* setup buttons */
+	displayButton.attach(BUTTON_DISPLAY_PIN, INPUT_PULLUP);
+	displayButton.interval(BUTTON_DEBOUNCE_ms);
+	displayButton.setPressedState(LOW);
+
+	tareButton.attach(BUTTON_TARE_PIN, INPUT_PULLUP);
+	tareButton.interval(BUTTON_DEBOUNCE_ms);
+	tareButton.setPressedState(LOW);
+
+	unitButton.attach(BUTTON_UNIT_PIN, INPUT_PULLUP);
+	unitButton.attach(BUTTON_DEBOUNCE_ms);
+	unitButton.setPressedState(LOW);
 
 	/* initialize settings and get from eeprom */
 	settings.begin();
@@ -118,7 +134,7 @@ void setup() {
 	runner.init();
 
 	/* 7-segment */
-	lc.shutdown(0,false);		/* wakeup */
+	lc.shutdown(0, display_sleep);		/* wakeup */
 	lc.setIntensity(0, settings.display.intensity);
 	lc.clearDisplay(0);
 
@@ -147,8 +163,15 @@ void setup() {
 
 	displayTest();
 
-	scale.tare();
+	displayTare();
+	scale.tare(TARE_SAMPLES);
 	scale.set_scale(settings.scale.factor);
+
+	/* fill scale buffer */
+	long val = scale.read_average(settings.scale.averaging);
+	for (uint8_t i=0; i<settings.scale.window; i++) {
+		scale_window[i] = val;
+	}
 
 	/* start scale reading and display */
 	runner.addTask(scaleTask);
@@ -160,15 +183,30 @@ void setup() {
 void loop() {
 	runner.execute();
 	ws.cleanupClients();
+	readButtons();
+}
 
-	/* set WiFi LED */
-	uint8_t num = WiFi.softAPgetStationNum();
-	if (num != softAPStationNum_last) {
-		softAPStationNum_last = num;
-		if (num > 0) {
-			ledWrite(LED_WIFI_PIN, HIGH);
+/* functions */
+void readButtons() {
+	displayButton.update();
+	tareButton.update();
+	unitButton.update();
+
+	if (displayButton.pressed()) {
+		display_sleep = !display_sleep;
+		lc.shutdown(0, display_sleep);
+	}
+
+	if (tareButton.pressed()) {
+		displayTare();
+		scale.tare(TARE_SAMPLES);
+	}
+
+	if (unitButton.pressed()) {
+		if (settings.scale.units == UNITS_KG) {
+			settings.scale.units = UNITS_LBS;
 		} else {
-			ledWrite(LED_WIFI_PIN, LOW);
+			settings.scale.units = UNITS_KG;
 		}
 	}
 }
@@ -206,24 +244,31 @@ void displayTest() {
 	lc.clearDisplay(0);
 }
 
+void displayTare() {
+	lc.clearDisplay(0);
+	lc.setRow(0, 5, 0x0f);
+	lc.setChar(0, 4, 'a', false);
+	lc.setRow(0, 3, 0x05);
+	lc.setChar(0, 2, 'e', false);
+}
+
 /* Scale Function ------------------------------------------------------------ */
 void readScale(void) {
-	scale_window[scale_window_index] = scale.read();
+	scale_window[scale_window_index] = scale.read_average(settings.scale.averaging);
 	scale_window_index++;
 
-	// scale_window_index = constrain(scale_window_index, 0, SCALE_WINDOW_LEN);
-	if (scale_window_index >= SCALE_WINDOW_LEN) {
+	if (scale_window_index >= settings.scale.window) {
 		scale_window_index = 0;
 	}
 
 	long sum = 0;
-	for (uint8_t i=0; i<SCALE_WINDOW_LEN; i++) {
+	for (uint8_t i=0; i<settings.scale.window; i++) {
 		sum += scale_window[i];
 	}
 
-	scale_raw = sum/SCALE_WINDOW_LEN;
-
-	// scale_raw = scale.read_average(settings.scale.averaging);
+	if (settings.scale.window != 0) {
+		scale_raw = sum/settings.scale.window;
+	}
 
 	if (settings.scale.units == settings.scale.cal_units) {
 		scale_units = (scale_raw - scale.get_offset()) / scale.get_scale();
@@ -239,19 +284,26 @@ void readScale(void) {
 /* display update ------------------------------------------------------------ */
 void updateDisplay(void) {
 	static uint8_t units_last = 255;
+	static uint8_t softAPStationNum_last = 0;
 	uint32_t divisor = 1;
 	uint8_t num;
 	char sign = ' ';
 
-	if (units_last != settings.scale.units) {
-		units_last = settings.scale.units;
-		if (settings.scale.units == UNITS_LBS) {
-			ledWrite(LED_LBS_PIN, HIGH);
-			ledWrite(LED_KG_PIN, LOW);
-		} else {
-			ledWrite(LED_LBS_PIN, LOW);
-			ledWrite(LED_KG_PIN, HIGH);
+	if (display_sleep != true) {
+		if (units_last != settings.scale.units) {
+			units_last = settings.scale.units;
+			if (settings.scale.units == UNITS_LBS) {
+				ledWrite(LED_LBS_PIN, HIGH);
+				ledWrite(LED_KG_PIN, LOW);
+			} else {
+				ledWrite(LED_LBS_PIN, LOW);
+				ledWrite(LED_KG_PIN, HIGH);
+			}
 		}
+	} else {
+		ledWrite(LED_LBS_PIN, LOW);
+		ledWrite(LED_KG_PIN, LOW);
+		units_last = 255;
 	}
 
 	/* move over two decimal places */
@@ -276,6 +328,26 @@ void updateDisplay(void) {
 			}
 			divisor *= 10;
 		}
+	}
+
+	/* update wifi led */
+	if (display_sleep != true) {
+		uint8_t clients = WiFi.softAPgetStationNum();
+		if (clients != softAPStationNum_last) {
+			softAPStationNum_last = clients;
+			if (clients > 0) {
+				ledWrite(LED_WIFI_PIN, HIGH);
+			} else {
+				ledWrite(LED_WIFI_PIN, LOW);
+
+				/* stop ws stream when no clients to listen*/
+				wsTask.disable();
+				runner.deleteTask(wsTask);
+			}
+		}
+	} else {
+		ledWrite(LED_WIFI_PIN, LOW);
+		softAPStationNum_last = 0;
 	}
 }
 
@@ -415,6 +487,7 @@ void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
 		case ACTION_SETTINGS_UPDATE:
 			settings.scale.units = wsData["units"].as<uint8_t>();
 			settings.scale.averaging = wsData["avg"].as<uint8_t>();
+			settings.scale.window = wsData["window"].as<uint8_t>();
 			settings.scale.cal_weight = wsData["cal"].as<float>();
 
 			settings.display.intensity = wsData["brightness"].as<uint8_t>();
@@ -427,7 +500,8 @@ void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
 			settings.putData(DISPLAY_NVS, &settings.display, sizeof(settings.display));
 			break;
 		case ACTION_TARE:
-			scale.tare(settings.scale.averaging);
+			displayTare();
+			scale.tare(TARE_SAMPLES);
 			wsSendInitData((uint32_t)client->id());		/* offset has changed so resend data */
 			break;
 		case ACTION_CALIBRATE:
@@ -447,6 +521,10 @@ void wsReceiveParse(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
 
 			wsSendInitData((uint32_t)client->id());		/* scale factor has changed so resend data */
 			break;
+		case ACTION_DISPLAY:
+			display_sleep = !display_sleep;
+			lc.shutdown(0, display_sleep);
+			break;
 		default:
 			break;
 	}
@@ -464,6 +542,7 @@ void wsSendInitData(uint32_t client_id) {
 
 	data["units"]			= settings.scale.units;
 	data["avg"]				= settings.scale.averaging;
+	data["window"]			= settings.scale.window;
 	data["cal"]				= settings.scale.cal_weight;
 	data["factor"]			= settings.scale.factor;
 	data["offset"]			= scale.get_offset();

@@ -18,20 +18,19 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
 </head>
 <body onload="initIndex()">
     <section>
-        <h2>Control</h2>
+        <!-- <h2>Control</h2> -->
         <div>
             <label for="raw">Raw Value</label>
             <output id="raw"></output>
-            <button class="rightButton" onclick="wsSend(4)">Start</button>
-            <button class="rightButton" onclick="wsSend(3)">Stop</button>
         </div>
         <div>
             <label for="weight">Weight</label>
             <output id="weight"></output>
-            <button class="rightButton" onclick="wsSend(7)">Tare</button>
         </div>
         <div>
-            
+            <label></label>
+            <button class="halfWidth" onclick="wsSend(9)">Display</button>
+            <button class="halfWidth" onclick="wsSend(7)">Tare</button>
         </div>
     </section>
     <section>
@@ -46,6 +45,10 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
         <div>
             <label for="avg">Averaging</label>
             <input type="number" id="avg" min="1" max="255">
+        </div>
+        <div>
+            <label for="window">Window</label>
+            <input type="number" id="window" min="1" max="255">
         </div>
         <div>
             <label for="brightness">Display Brightness</label>

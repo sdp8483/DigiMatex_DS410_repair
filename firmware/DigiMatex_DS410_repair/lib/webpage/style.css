@@ -19,6 +19,7 @@ select {display: inline-block; width: 208px; padding-left: 0; padding-right: 0;}
 
 /* button placed inline with input or output */
 button.rightButton {width: 86px;}
+button.halfWidth {width: 102px;}
 
 /* button to submit settings */
 button.submit-action {margin-left: 184px; width: 208px;}

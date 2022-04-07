@@ -9,6 +9,8 @@
 #define SCALE_RATE_ms       250
 #define DISPLAY_RATE_ms     500
 
+#define TARE_SAMPLES        25
+
 #define LOADCELL_DOUT_PIN   32
 #define LOADCELL_SCK_PIN    33
 
@@ -26,9 +28,14 @@
 #define BUTTON_DISPLAY_PIN  19
 #define BUTTON_UNIT_PIN     21
 #define BUTTON_TARE_PIN     22
+#define BUTTON_DEBOUNCE_ms  5     
 
 #define LBS_TO_KG           0.45359237f
 #define KG_TO_LBS           2.20462262185f
+
+#define SCALE_GAIN_128      128
+#define SCALE_GAIN_64       64
+#define SCALE_GAIN_32       32
 
 #define SSID_LEN            32              /* sources suggest SSID length has a max of 32 characters */
 
@@ -44,6 +51,7 @@
 typedef struct __scale_settings_t {
     uint8_t units;                          /* display units */
     uint8_t averaging;                      /* number of samples to average for each scale reading */
+    uint8_t window;                         /* size of window averaging */
     float cal_weight;                       /* weight used for calibration */
     uint8_t cal_units;                      /* units used for calibration */
     float factor;                           /* scale factor to convert adc readings to kg */

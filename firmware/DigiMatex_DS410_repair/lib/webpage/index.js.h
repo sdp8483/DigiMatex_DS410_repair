@@ -23,6 +23,9 @@ function wsOpen(event) {
 
     /* get init data */
     wsSend(2);
+
+    /* start data stream */
+    wsSend(4);
 }
 
 function wsClose(event) {
@@ -61,6 +64,7 @@ function wsReceive(event) {
 function parseInitData(data) {
     document.getElementById("units").value = data.units;
     document.getElementById("avg").value = data.avg;
+    document.getElementById("window").value = data.window;
 
     document.getElementById("brightness").value = data.brightness;
 
@@ -99,6 +103,7 @@ function wsSend(a) {
                 console.log("Updating settings")
                 data.units = document.getElementById("units").value;
                 data.avg = document.getElementById("avg").value;
+                data.window = document.getElementById("window").value;
                 data.brightness = document.getElementById("brightness").value;
                 data.cal = document.getElementById("cal").value;
                 data.dec = document.getElementById("dec").value;
@@ -111,6 +116,9 @@ function wsSend(a) {
                 console.log("calibrating");
                 data.cal = document.getElementById("cal").value;
                 data.units = document.getElementById("units").value;
+                break;
+            case 9:
+                console.log("display");
                 break;
             default:
                 console.log("default");

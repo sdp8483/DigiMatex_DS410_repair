@@ -12,20 +12,19 @@
 </head>
 <body onload="initIndex()">
     <section>
-        <h2>Control</h2>
+        <!-- <h2>Control</h2> -->
         <div>
             <label for="raw">Raw Value</label>
             <output id="raw"></output>
-            <button class="rightButton" onclick="wsSend(ACTION_RESUME_STREAM)">Start</button>
-            <button class="rightButton" onclick="wsSend(ACTION_PAUSE_STREAM)">Stop</button>
         </div>
         <div>
             <label for="weight">Weight</label>
             <output id="weight"></output>
-            <button class="rightButton" onclick="wsSend(ACTION_TARE)">Tare</button>
         </div>
         <div>
-            
+            <label></label>
+            <button class="halfWidth" onclick="wsSend(ACTION_DISPLAY)">Display</button>
+            <button class="halfWidth" onclick="wsSend(ACTION_TARE)">Tare</button>
         </div>
     </section>
     <section>
@@ -40,6 +39,10 @@
         <div>
             <label for="avg">Averaging</label>
             <input type="number" id="avg" min="1" max="255">
+        </div>
+        <div>
+            <label for="window">Window</label>
+            <input type="number" id="window" min="1" max="255">
         </div>
         <div>
             <label for="brightness">Display Brightness</label>
