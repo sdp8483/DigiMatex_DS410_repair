@@ -1,8 +1,21 @@
 #!/usr/bin/python
 
+Import("env")
+
 ''' Import Libraries --------------------------------------------------------- '''
 import os
 import configparser
+
+try:
+    import htmlmin
+except ImportError:
+    env.Execute(
+        env.VerboseAction(
+            '$PYTHONEXE -m pip install "htmlmin" ',
+            "Installing htmlmin",
+        )
+    )
+    import htmlmin
 
 ''' User Settings ------------------------------------------------------------ '''
 ini_fname = "platformio.ini"
@@ -54,7 +67,8 @@ for f in files_to_convert:
         for k,v in bf_dic.items():
             js = js.replace(k, v)
         
-        tf.write(js)
+        js_mini = htmlmin.minify(js, remove_comments=True)
+        tf.write(js_mini)
 
 ''' Write header files ------------------------------------------------------- '''
 print("\nWriting header files...")
