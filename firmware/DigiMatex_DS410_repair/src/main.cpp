@@ -37,7 +37,7 @@
  * 		BUGFIX marks very minor updates such as bug fix, optimization, or text edit
  */
 #define HW_VERSION			"V1.0"
-#define FW_VERSION			"V1.0.0.0"
+#define FW_VERSION			"V1.0.0.1"
 
 /* WiFi Settings -------------------------------------------------------------*/
 AsyncWebServer server(80);
@@ -124,7 +124,7 @@ void setup() {
 	tareButton.setPressedState(LOW);
 
 	unitButton.attach(BUTTON_UNIT_PIN, INPUT_PULLUP);
-	unitButton.attach(BUTTON_DEBOUNCE_ms);
+	unitButton.interval(BUTTON_DEBOUNCE_ms);
 	unitButton.setPressedState(LOW);
 
 	/* initialize settings and get from eeprom */
