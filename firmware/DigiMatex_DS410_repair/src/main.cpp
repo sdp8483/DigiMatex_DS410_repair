@@ -306,7 +306,7 @@ void updateDisplay(void) {
 		units_last = 255;
 	}
 
-	/* move over two decimal places */
+	/* move over x decimal places */
 	int32_t val = (int32_t) (scale_units * (pow(10.0f, settings.display.decimal_places)));
 
 	lc.clearDisplay(0);
@@ -561,6 +561,7 @@ void wsStream() {
 	StaticJsonDocument<64> data;
 	
 	data["action"]			= ACTION_SCALE_VALUE;
+	data["v"]				= scale_window[scale_window_index];
 	data["raw"]				= scale_raw;
 	data["weight"]			= scale_units;
 

@@ -65,7 +65,6 @@ function parseInitData(data) {
     document.getElementById("units").value = data.units;
     document.getElementById("avg").value = data.avg;
     document.getElementById("window").value = data.window;
-
     document.getElementById("brightness").value = data.brightness;
 
     dec = data.dec;
