@@ -36,7 +36,7 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
     <section>
         <h2>Settings</h2>
         <div>
-            <label for="uints">Units</label>
+            <label for="units">Units</label>
             <select id="units">
                 <option value="0">kilograms</option>
                 <option value="1">pounds</option>
@@ -70,11 +70,11 @@ const char PAGE_index_HTML[] PROGMEM = R"=====(
         </div>
         <div>
             <label for="factor">Scale Factor</label>
-            <output type="number" id="factor"></output>
+            <output id="factor"></output>
         </div>
         <div>
             <label for="offset">Scale Offset</label>
-            <output type="number" id="offset"></output>
+            <output id="offset"></output>
         </div>
     </section>
 
