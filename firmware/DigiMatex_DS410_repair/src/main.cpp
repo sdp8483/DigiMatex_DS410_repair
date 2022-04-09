@@ -37,7 +37,7 @@
  * 		BUGFIX marks very minor updates such as bug fix, optimization, or text edit
  */
 #define HW_VERSION			"V1.0"
-#define FW_VERSION			"V0.1.0.0"
+#define FW_VERSION			"V1.0.0.0"
 
 /* WiFi Settings -------------------------------------------------------------*/
 AsyncWebServer server(80);
@@ -266,18 +266,24 @@ void readScale(void) {
 		sum += scale_window[i];
 	}
 
-	if (settings.scale.window != 0) {
+	if (settings.scale.window != 0) {				/* div by 0 protection */
 		scale_raw = sum/settings.scale.window;
+	} else {
+		debugLogln("averaging window is 0! Div by zero protection enabled");
 	}
 
-	if (settings.scale.units == settings.scale.cal_units) {
-		scale_units = (scale_raw - scale.get_offset()) / scale.get_scale();
-	} else {
-		if (settings.scale.cal_units == UNITS_KG) {
-			scale_units = ((scale_raw - scale.get_offset()) / scale.get_scale()) * KG_TO_LBS;
+	if (scale.get_scale() != 0) {					/* div by 0 protection */
+		if (settings.scale.units == settings.scale.cal_units) {
+			scale_units = (scale_raw - scale.get_offset()) / scale.get_scale();
 		} else {
-			scale_units = ((scale_raw - scale.get_offset()) / scale.get_scale()) * LBS_TO_KG;
+			if (settings.scale.cal_units == UNITS_KG) {
+				scale_units = ((scale_raw - scale.get_offset()) / scale.get_scale()) * KG_TO_LBS;
+			} else {
+				scale_units = ((scale_raw - scale.get_offset()) / scale.get_scale()) * LBS_TO_KG;
+			}
 		}
+	} else {
+		debugLogln("scale factor is 0! Div by zero protection enabled");
 	}
 }
 
